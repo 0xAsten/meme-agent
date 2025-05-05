@@ -2,6 +2,7 @@
 
 import { ConnectKitButton } from 'connectkit'
 import { AIMemeGenerator } from './components/AIMemeGenerator'
+import { MemeNFTGallery } from './components/MemeNFTGallery'
 
 export default function Home() {
   return (
@@ -11,7 +12,10 @@ export default function Home() {
         <ConnectKitButton />
       </div>
 
-      <AIMemeGenerator />
+      <div className="flex flex-col gap-8">
+        <AIMemeGenerator />
+        <MemeNFTGallery />
+      </div>
     </div>
   )
 }
