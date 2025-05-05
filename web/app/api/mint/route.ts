@@ -83,6 +83,7 @@ export async function POST(req: Request) {
 
     const { text } = await generateText({
       model: google('models/gemini-2.0-flash-exp'),
+      maxSteps: 5,
       tools: {
         listTemplates: tool({
           description: 'List available meme templates',
@@ -257,7 +258,8 @@ export async function POST(req: Request) {
               return {
                 success: true,
                 transactionHash: hash,
-                blockNumber: receipt.blockNumber,
+                blockNumber:
+                  Number(receipt.blockNumber) || String(receipt.blockNumber),
                 memeUrl,
               }
             } catch (error) {
