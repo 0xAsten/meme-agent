@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-
-interface MemeNFT {
-  id: string
-  tokenId: string
-  owner: string
-  tokenURI: string
-}
+import { MemeNFT, fetchMemeNFTs } from '../lib/graphql'
 
 export function MemeNFTGallery() {
   const [nfts, setNfts] = useState<MemeNFT[]>([])
@@ -16,88 +10,15 @@ export function MemeNFTGallery() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchNFTs() {
+    async function getNFTs() {
       try {
-        // This is a mock implementation - in a real app, you would use a GraphQL client
-        // like Apollo or urql to execute the query against your GraphQL endpoint
-        const mockData = {
-          data: {
-            memeNFTs: [
-              {
-                id: '0x00',
-                tokenId: '0',
-                owner: '0xc1a6a1daa5a1ac828b6a5ad1c59bc4bbf7be6723',
-                tokenURI:
-                  'https://api.memegen.link/images/woman-cat/My_Code/Production_Environment.png',
-              },
-              {
-                id: '0x01',
-                tokenId: '1',
-                owner: '0xc1a6a1daa5a1ac828b6a5ad1c59bc4bbf7be6723',
-                tokenURI:
-                  'https://api.memegen.link/images/drake/Code_working_perfectly_in_development/Code_breaking_in_production.png',
-              },
-              {
-                id: '0x02',
-                tokenId: '2',
-                owner: '0xc1a6a1daa5a1ac828b6a5ad1c59bc4bbf7be6723',
-                tokenURI:
-                  'https://api.memegen.link/images/fine/When_your_code_works/But_you_have_no_idea_why.png',
-              },
-              {
-                id: '0x03',
-                tokenId: '3',
-                owner: '0x7f5a6a1daa5a1ac828b6a5ad1c59bc4bbf7be9087',
-                tokenURI:
-                  'https://api.memegen.link/images/afraid/CSS/is_coming.png',
-              },
-              {
-                id: '0x04',
-                tokenId: '4',
-                owner: '0x7f5a6a1daa5a1ac828b6a5ad1c59bc4bbf7be9087',
-                tokenURI:
-                  'https://api.memegen.link/images/doge/such_code/much_wow.png',
-              },
-              {
-                id: '0x05',
-                tokenId: '5',
-                owner: '0x5c2b6a1daa5a1ac828b6a5ad1c59bc4bbf7be1234',
-                tokenURI:
-                  'https://api.memegen.link/images/success/finally/fixed_that_bug.png',
-              },
-              {
-                id: '0x06',
-                tokenId: '6',
-                owner: '0x5c2b6a1daa5a1ac828b6a5ad1c59bc4bbf7be1234',
-                tokenURI:
-                  'https://api.memegen.link/images/disaster-girl/git_merge/git_push_--force.png',
-              },
-              {
-                id: '0x07',
-                tokenId: '7',
-                owner: '0x821a6a1daa5a1ac828b6a5ad1c59bc4bbf7be4567',
-                tokenURI:
-                  'https://api.memegen.link/images/morpheus/what_if_I_told_you/your_code_doesn%27t_work.png',
-              },
-              {
-                id: '0x08',
-                tokenId: '8',
-                owner: '0x821a6a1daa5a1ac828b6a5ad1c59bc4bbf7be4567',
-                tokenURI:
-                  'https://api.memegen.link/images/patrick/lets_take_all_the_bugs/and_push_them_to_production.png',
-              },
-              {
-                id: '0x09',
-                tokenId: '9',
-                owner: '0x918a6a1daa5a1ac828b6a5ad1c59bc4bbf7be8765',
-                tokenURI:
-                  'https://api.memegen.link/images/yodawg/yo_dawg_i_heard_you_like_bugs/so_I_put_bugs_in_your_fixes_so_you_can_debug_while_you_debug.png',
-              },
-            ],
-          },
-        }
+        setLoading(true)
 
-        setNfts(mockData.data.memeNFTs)
+        // Use the fetchMemeNFTs utility function
+        const memeNFTs = await fetchMemeNFTs(50)
+        console.log('Fetched NFTs:', memeNFTs)
+
+        setNfts(memeNFTs)
         setLoading(false)
       } catch (err) {
         console.error('Error fetching NFTs:', err)
@@ -106,7 +27,7 @@ export function MemeNFTGallery() {
       }
     }
 
-    fetchNFTs()
+    getNFTs()
   }, [])
 
   // Function to truncate Ethereum addresses
