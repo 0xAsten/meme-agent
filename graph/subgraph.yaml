@@ -8,7 +8,7 @@ dataSources:
     name: MemeNFT
     network: soneium
     source:
-      address: "0x0Eb5E44Da15d0D0ae51B5E2d24f5489FDf0EC7B0"
+      address: '0x0Eb5E44Da15d0D0ae51B5E2d24f5489FDf0EC7B0'
       abi: MemeNFT
       startBlock: 6639781
     mapping:
@@ -16,26 +16,14 @@ dataSources:
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Approval
-        - ApprovalForAll
-        - BatchMetadataUpdate
         - MemeMinted
-        - MetadataUpdate
         - Transfer
       abis:
         - name: MemeNFT
           file: ./abis/MemeNFT.json
       eventHandlers:
-        - event: Approval(indexed address,indexed address,indexed uint256)
-          handler: handleApproval
-        - event: ApprovalForAll(indexed address,indexed address,bool)
-          handler: handleApprovalForAll
-        - event: BatchMetadataUpdate(uint256,uint256)
-          handler: handleBatchMetadataUpdate
         - event: MemeMinted(uint256,address,string)
           handler: handleMemeMinted
-        - event: MetadataUpdate(uint256)
-          handler: handleMetadataUpdate
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
       file: ./src/meme-nft.ts
