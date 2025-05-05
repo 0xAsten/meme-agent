@@ -1,4 +1,4 @@
-import { Bytes } from '@graphprotocol/graph-ts'
+import { ByteArray, Bytes } from '@graphprotocol/graph-ts'
 import {
   MemeMinted as MemeMintedEvent,
   Transfer as TransferEvent,
@@ -7,7 +7,7 @@ import { MemeNFT } from '../generated/schema'
 
 export function handleMemeMinted(event: MemeMintedEvent): void {
   let entity = new MemeNFT(
-    Bytes.fromHexString(event.params.tokenId.toHexString()),
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.tokenId)),
   )
 
   entity.tokenId = event.params.tokenId
@@ -19,8 +19,11 @@ export function handleMemeMinted(event: MemeMintedEvent): void {
 
 export function handleTransfer(event: TransferEvent): void {
   let entity = MemeNFT.load(
-    Bytes.fromHexString(event.params.tokenId.toHexString()),
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.tokenId)),
   )
+
+  Bytes.fromI32
+  Bytes.fromByteArray
 
   if (!entity) {
     return
