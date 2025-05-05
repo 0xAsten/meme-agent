@@ -5,6 +5,18 @@ import { useAccount } from 'wagmi'
 import toast from 'react-hot-toast'
 import Image from 'next/image'
 
+// Helper function to fix meme URLs by replacing // with _ but keeping https://
+const fixMemeUrl = (url: string) => {
+  // Split the URL into protocol and rest
+  const [protocol, ...rest] = url.split('://')
+
+  // Join the rest and replace any remaining double slashes with /_/
+  const fixedRest = rest.join('://').replace(/\/\//g, '/_/')
+
+  // Rejoin with the protocol
+  return `${protocol}://${fixedRest}`
+}
+
 export function AIMemeGenerator() {
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -75,14 +87,14 @@ export function AIMemeGenerator() {
 
       // Extract meme URL from the response if available
       if (data.memeUrl) {
-        setMemeUrl(data.memeUrl)
+        setMemeUrl(fixMemeUrl(data.memeUrl))
       } else if (data.message) {
         // Try to extract URL from AI message
         const urlMatch = data.message.match(
           /(https?:\/\/api\.memegen\.link\/images\/[^\s"]+)/i,
         )
         if (urlMatch && urlMatch[1]) {
-          setMemeUrl(urlMatch[1])
+          setMemeUrl(fixMemeUrl(urlMatch[1]))
         }
       }
 

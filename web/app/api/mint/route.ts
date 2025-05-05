@@ -30,7 +30,6 @@ const MEME_TEMPLATES = templatesData as MemeTemplate[]
 
 // Define a list of popular meme template IDs to use as fallback
 const POPULAR_TEMPLATE_IDS = [
-  'drake',
   'doge',
   'fry',
   'fine',
@@ -176,7 +175,9 @@ export async function POST(req: Request) {
           parameters: z.object({
             templateId: z
               .string()
-              .describe('ID of the meme template (e.g., "drake", "doge")'),
+              .describe(
+                'ID of the meme template (e.g., "fry", "woman-cat", "doge")',
+              ),
             topText: z
               .string()
               .describe('Text for the top of the meme')
@@ -195,9 +196,13 @@ export async function POST(req: Request) {
             // If template doesn't exist, use a default template
             if (!templateExists) {
               console.log(
-                `Template ID "${templateId}" not found. Using "drake" template as fallback.`,
+                `Template ID "${templateId}" not found. Using a random template as fallback.`,
               )
-              templateId = 'drake'
+              // random template
+              templateId =
+                MEME_TEMPLATES[
+                  Math.floor(Math.random() * MEME_TEMPLATES.length)
+                ].id
             }
 
             // Generate meme URL

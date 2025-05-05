@@ -21,8 +21,16 @@ export function generateMemeUrl(
       .replace(/>/g, '~g')
   }
 
-  const sanitizedTop = sanitizeForUrl(topText)
-  const sanitizedBottom = sanitizeForUrl(bottomText)
+  const sanitizedTop =
+    sanitizeForUrl(topText) === '' ? '_' : sanitizeForUrl(topText)
+  const sanitizedBottom =
+    sanitizeForUrl(bottomText) === '' ? '_' : sanitizeForUrl(bottomText)
 
-  return `${MEMEGEN_API_BASE}/images/${templateId}/${sanitizedTop}/${sanitizedBottom}.${format}`
+  // Generate the URL - a double slash can occur if sanitizedTop or sanitizedBottom is empty
+  const url = `${MEMEGEN_API_BASE}/images/${templateId}/${sanitizedTop}/${sanitizedBottom}.${format}`
+
+  // Fix any double slashes in the path (but preserve protocol's double slash)
+  const [protocol, rest] = url.split('://')
+  const fixedRest = rest.replace(/\/\//g, '/_/')
+  return `${protocol}://${fixedRest}`
 }
