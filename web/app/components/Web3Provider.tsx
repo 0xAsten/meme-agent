@@ -1,7 +1,12 @@
+'use client'
+
 import { WagmiProvider, createConfig, http } from 'wagmi'
 import { soneium } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
+
+// Create a client
+const queryClient = new QueryClient()
 
 const config = createConfig(
   getDefaultConfig({
@@ -19,8 +24,6 @@ const config = createConfig(
     appDescription: 'MEME Agent',
   }),
 )
-
-const queryClient = new QueryClient()
 
 export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   return (
