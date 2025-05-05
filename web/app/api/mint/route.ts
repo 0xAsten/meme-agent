@@ -79,6 +79,14 @@ export async function POST(req: Request) {
       )
     }
 
+    // Create a list of all template IDs with their names for the LLM
+    const templatesList = MEME_TEMPLATES.map(
+      (template) =>
+        `${template.id}: ${template.name}${
+          template.keywords?.length ? ` (${template.keywords.join(', ')})` : ''
+        }`,
+    ).join('\n')
+
     let generatedMemeUrl: string | null = null
 
     const { text } = await generateText({
@@ -98,13 +106,9 @@ export async function POST(req: Request) {
               .number()
               .describe('Optional limit for number of templates to return')
               .optional(),
-            category: z
-              .string()
-              .describe('Optional category to filter templates')
-              .optional(),
           }),
-          execute: async ({ searchQuery = '', limit = 10, category = '' }) => {
-            // Filter templates based on search query and category
+          execute: async ({ searchQuery = '', limit = 10 }) => {
+            // Filter templates based on search query
             let filteredTemplates = MEME_TEMPLATES
 
             if (searchQuery) {
@@ -119,35 +123,19 @@ export async function POST(req: Request) {
               )
             }
 
-            if (category) {
-              const cat = category.toLowerCase()
-              filteredTemplates = filteredTemplates.filter(
-                (template) =>
-                  template.keywords &&
-                  template.keywords.some(
-                    (keyword: string) => keyword.toLowerCase() === cat,
-                  ),
-              )
-            }
-
             // Check if we have any results after filtering
             if (filteredTemplates.length === 0) {
               console.log(
-                `No templates found for query: "${searchQuery}", category: "${category}". Using popular templates as fallback.`,
+                `No templates found for query: "${searchQuery}". Using popular templates as fallback.`,
               )
 
-              // Use popular templates as fallback
-              filteredTemplates = MEME_TEMPLATES.filter((template) =>
+              // If no matches found, suggest popular templates and provide better feedback
+              const popularTemplates = MEME_TEMPLATES.filter((template) =>
                 POPULAR_TEMPLATE_IDS.includes(template.id),
               )
 
-              // If somehow popular templates are also empty, use the first 10 templates
-              if (filteredTemplates.length === 0) {
-                filteredTemplates = MEME_TEMPLATES.slice(0, 10)
-              }
-
               return {
-                templates: filteredTemplates.map((template) => ({
+                templates: popularTemplates.map((template) => ({
                   id: template.id,
                   name: template.name,
                   keywords: template.keywords || [],
@@ -155,10 +143,10 @@ export async function POST(req: Request) {
                   overlays: template.overlays || 0,
                   styles: template.styles || [],
                   blank: template.blank,
+                  example: template.example,
                 })),
-                totalCount: filteredTemplates.length,
-                message:
-                  'No templates matched your filters. Showing popular templates instead.',
+                totalCount: popularTemplates.length,
+                message: `No templates found for "${searchQuery}". Here are some popular templates instead. You can also try a different search term or select directly from the full list of available templates.`,
               }
             }
 
@@ -176,6 +164,7 @@ export async function POST(req: Request) {
                 overlays: template.overlays || 0,
                 styles: template.styles || [],
                 blank: template.blank,
+                example: template.example,
               })),
               totalCount: filteredTemplates.length,
             }
@@ -269,7 +258,18 @@ export async function POST(req: Request) {
           },
         }),
       },
-      prompt: `Based on this prompt: "${prompt}", please generate a creative and funny meme. First, review the available meme templates by using the listTemplates tool. Then select an appropriate template and create funny text for the top and bottom of the meme. Once the meme is generated, mint it as an NFT for user address: ${userAddress}.`,
+      prompt: `Based on this prompt: "${prompt}", please generate a creative and funny meme. First, review the available meme templates by using the listTemplates tool. Then select an appropriate template and create funny text for the top and bottom of the meme. Once the meme is generated, mint it as an NFT for user address: ${userAddress}.
+
+Available templates:
+${templatesList}
+
+Instructions:
+1. You can directly choose a template from the list above based on the user's prompt.
+2. If you need more information about specific templates, use the listTemplates tool with a search query.
+3. When selecting a template, consider the theme and context of the user's prompt.
+4. For templates with 2 lines, provide both topText and bottomText. Some templates may have different requirements.
+5. After generating the meme, proceed with minting it as an NFT.
+`,
       onStepFinish({ toolResults }) {
         console.log('Tool results:', toolResults)
         // Try to extract meme URL from tool results if not already captured
