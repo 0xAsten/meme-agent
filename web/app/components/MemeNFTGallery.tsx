@@ -21,6 +21,7 @@ export function MemeNFTGallery() {
   const ITEMS_PER_PAGE = 10
 
   const fetchNFTs = async (pageNumber = 1, isInitialLoad = false) => {
+    console.log('Fetching NFTs for page:', pageNumber)
     try {
       if (isInitialLoad) {
         setLoading(true)
@@ -60,36 +61,38 @@ export function MemeNFTGallery() {
 
       // If we got fewer items than requested, there are no more items to load
       if (memeNFTs.length < ITEMS_PER_PAGE) {
+        console.log('No more items to load')
         setHasMore(false)
       }
 
       // Check for new NFTs only on polling, not when loading more pages
-      if (isInitialLoad && previousNftIdsRef.current.size > 0) {
-        const newTokenIds = new Set<string>()
-
-        // Find NFTs that weren't in the previous set
-        filteredMemeNFTs.forEach((nft) => {
-          if (!previousNftIdsRef.current.has(nft.tokenId)) {
-            newTokenIds.add(nft.tokenId)
-          }
-        })
-
-        if (newTokenIds.size > 0) {
-          setNewNftIds(newTokenIds)
-          console.log('New NFTs:', newTokenIds)
-          // Clear the highlight after 5 seconds
-          setTimeout(() => {
-            setNewNftIds(new Set())
-          }, 5000)
-        }
-      }
-
       if (isInitialLoad) {
-        // Update reference with current NFT IDs for next comparison
+        if (previousNftIdsRef.current.size > 0) {
+          const newTokenIds = new Set<string>()
+
+          // Find NFTs that weren't in the previous set
+          filteredMemeNFTs.forEach((nft) => {
+            if (!previousNftIdsRef.current.has(nft.tokenId)) {
+              newTokenIds.add(nft.tokenId)
+              setNfts((prev) => [nft, ...prev])
+            }
+          })
+
+          if (newTokenIds.size > 0) {
+            setNewNftIds(newTokenIds)
+            console.log('New NFTs:', newTokenIds)
+            // Clear the highlight after 5 seconds
+            setTimeout(() => {
+              setNewNftIds(new Set())
+            }, 5000)
+          }
+        } else {
+          setNfts(filteredMemeNFTs)
+        }
+
         previousNftIdsRef.current = new Set(
           filteredMemeNFTs.map((nft) => nft.tokenId),
         )
-        setNfts(filteredMemeNFTs)
       } else {
         // Append new NFTs to existing list
         setNfts((prev) => [...prev, ...filteredMemeNFTs])
@@ -115,7 +118,8 @@ export function MemeNFTGallery() {
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
-    if (loadMoreRef.current && hasMore) {
+    // Only set up the observer after the component has fully rendered and nfts exist
+    if (loadMoreRef.current && hasMore && nfts.length > 0) {
       observerRef.current = new IntersectionObserver(
         (entries) => {
           if (entries[0].isIntersecting && !loadingMore) {
@@ -133,7 +137,7 @@ export function MemeNFTGallery() {
         observerRef.current.disconnect()
       }
     }
-  }, [loadMore, loadingMore, hasMore])
+  }, [loadMore, loadingMore, hasMore, nfts.length])
 
   useEffect(() => {
     // Initial fetch
@@ -265,8 +269,10 @@ export function MemeNFTGallery() {
           ref={loadMoreRef}
           className="flex justify-center items-center p-4 mt-2"
         >
-          {loadingMore && (
+          {loadingMore ? (
             <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-500"></div>
+          ) : (
+            <div className="h-6 w-6"></div> // Empty div to ensure the ref is always attached to something visible
           )}
         </div>
       )}
@@ -309,7 +315,7 @@ function MemeNFTCard({
             quality={75}
             onError={() => setImageError(true)}
             onLoad={() => setImageLoaded(true)}
-            loading="lazy"
+            loading={parseInt(nft.tokenId) < 5 ? undefined : 'lazy'}
             className={`w-full h-auto ${
               !imageLoaded ? 'invisible absolute' : ''
             }`}
