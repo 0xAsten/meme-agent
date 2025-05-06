@@ -5,9 +5,8 @@ import { NextResponse } from 'next/server'
 import { createPublicClient, createWalletClient, http, parseAbi } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { soneium } from 'wagmi/chains'
-import { generateMemeUrl } from '../../utils/genMemeUrl'
 import templatesData from '../../lib/templates.json'
-import { MEMEGEN_API_BASE } from '../../utils/genMemeUrl'
+import { MEMEGEN_API_BASE, generateMemeUrl } from '../../utils/genMemeUrl'
 
 // Define the template interface to match the structure in templates.json
 interface MemeTemplate {
@@ -65,10 +64,13 @@ export async function POST(req: Request) {
       )
     }
 
-    // Create a list of all template IDs with their names for the LLM
-    const templatesList = MEME_TEMPLATES.map(
-      (template) => `{id: ${template.id}, desc: ${template.name}}`,
-    )
+    // Create a list of all template IDs with their names, lines, and example for the LLM
+    const templatesList = MEME_TEMPLATES.map((template) => {
+      const exampleText = template.example?.text || []
+      return `{id: ${template.id}, name: ${template.name}, lines: ${
+        template.lines || 2
+      }, example: ${JSON.stringify(exampleText)}}`
+    })
 
     let generatedMemeUrl: string | null = null
 
@@ -81,38 +83,64 @@ export async function POST(req: Request) {
           description: 'Generate a meme based on user prompt',
           parameters: z.object({
             templateId: z.string().describe('ID of the meme template'),
-            topText: z
-              .string()
-              .describe('Text for the top of the meme')
-              .optional(),
-            bottomText: z
-              .string()
-              .describe('Text for the bottom of the meme')
-              .optional(),
+            textLines: z
+              .array(z.string())
+              .describe(
+                'Array of text lines for the meme, matching the template line requirements',
+              ),
           }),
-          execute: async ({ templateId, topText = '', bottomText = '' }) => {
+          execute: async ({ templateId, textLines }) => {
             // Verify that the template exists
-            const templateExists = MEME_TEMPLATES.some(
-              (t) => t.id === templateId,
-            )
+            const template = MEME_TEMPLATES.find((t) => t.id === templateId)
 
             // If template doesn't exist, use a default template
-            if (!templateExists) {
+            if (!template) {
               console.log(
                 `Template ID "${templateId}" not found. Using a random template as fallback.`,
               )
               // random template
-              templateId =
+              const randomTemplate =
                 MEME_TEMPLATES[
                   Math.floor(Math.random() * MEME_TEMPLATES.length)
-                ].id
+                ]
+              templateId = randomTemplate.id
+
+              // Adjust textLines length to match the template if needed
+              const requiredLines = randomTemplate.lines || 2
+              if (textLines.length !== requiredLines) {
+                // Fill with empty strings if not enough lines
+                while (textLines.length < requiredLines) {
+                  textLines.push('')
+                }
+                // Trim if too many lines
+                if (textLines.length > requiredLines) {
+                  textLines = textLines.slice(0, requiredLines)
+                }
+              }
+            } else {
+              // Adjust textLines to match the template's required number of lines
+              const requiredLines = template.lines || 2
+              if (textLines.length !== requiredLines) {
+                console.log(
+                  `Adjusting text lines from ${textLines.length} to ${requiredLines} lines`,
+                )
+                // Fill with empty strings if not enough lines
+                while (textLines.length < requiredLines) {
+                  textLines.push('')
+                }
+                // Trim if too many lines
+                if (textLines.length > requiredLines) {
+                  textLines = textLines.slice(0, requiredLines)
+                }
+              }
             }
 
-            // Generate meme URL
-            const memeUrl = generateMemeUrl(templateId, topText, bottomText)
+            // Generate meme URL with all text lines
+            const memeUrl = generateMemeUrl(templateId, textLines)
+
             console.log(`Generated meme URL: ${memeUrl}`)
             generatedMemeUrl = memeUrl
-            return { memeUrl, templateId, topText, bottomText }
+            return { memeUrl, templateId, textLines }
           },
         }),
 
@@ -183,14 +211,16 @@ Instructions:
 1. Carefully analyze the user's prompt for specific emotions, situations, or cultural references.
 2. Choose a meme template that best matches the theme, tone, and context of the prompt.
 3. When selecting a template, use the "id" field from the template list as your templateId parameter.
-4. The "desc" field describes what the meme template is for - use this to match content appropriately.
-5. Avoid repeatedly using the same templates - diversity in template selection is important.
-6. Create relevant and witty text for the meme that connects well with both the template's intended use and the user's request.
+4. Pay attention to the "lines" field which indicates how many text lines the template supports.
+5. Study the "example" field to understand how the template is typically used - this contains sample text that works well with this template.
+6. Avoid repeatedly using the same templates - diversity in template selection is important.
+7. Create relevant and witty text lines for the meme that connects well with both the template's intended use and the user's request.
+8. Provide exactly the right number of text lines for the chosen template.
 
 Here are all available templates:
 ${templatesList}
 
-After selecting a template, generate a meme with appropriate text (topText and bottomText) that creates humor while staying relevant to the prompt. Then mint it as an NFT for user address: ${userAddress}.`,
+After selecting a template, generate a meme with appropriate text lines (exactly matching the number of lines required by the template) that creates humor while staying relevant to the prompt. Then mint it as an NFT for user address: ${userAddress}.`,
       onStepFinish({ toolResults }) {
         console.log('Tool results:', toolResults)
         // Try to extract meme URL from tool results if not already captured
