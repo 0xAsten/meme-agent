@@ -28,20 +28,6 @@ interface MemeTemplate {
 // Use the imported JSON directly
 const MEME_TEMPLATES = templatesData as MemeTemplate[]
 
-// Define a list of popular meme template IDs to use as fallback
-const POPULAR_TEMPLATE_IDS = [
-  'doge',
-  'fry',
-  'fine',
-  'woman-cat',
-  'distracted',
-  'success',
-  'rollsafe',
-  'kermit',
-  'spiderman',
-  'buzz',
-]
-
 const PRIVATE_KEY = process.env.PRIVATE_KEY || ''
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || ''
 const CONTRACT_ADDRESS = '0x0Eb5E44Da15d0D0ae51B5E2d24f5489FDf0EC7B0'
@@ -80,104 +66,20 @@ export async function POST(req: Request) {
 
     // Create a list of all template IDs with their names for the LLM
     const templatesList = MEME_TEMPLATES.map(
-      (template) =>
-        `${template.id}: ${template.name}${
-          template.keywords?.length ? ` (${template.keywords.join(', ')})` : ''
-        }`,
-    ).join('\n')
+      (template) => `{id: ${template.id}, desc: ${template.name}}`,
+    )
 
     let generatedMemeUrl: string | null = null
 
     const { text } = await generateText({
-      model: google('models/gemini-2.0-flash-exp'),
+      model: google('models/gemini-2.0-flash-lite'),
+      temperature: 1,
       maxSteps: 5,
       tools: {
-        listTemplates: tool({
-          description: 'List available meme templates',
-          parameters: z.object({
-            searchQuery: z
-              .string()
-              .describe(
-                'Optional search term to filter templates by name or keywords',
-              )
-              .optional(),
-            limit: z
-              .number()
-              .describe('Optional limit for number of templates to return')
-              .optional(),
-          }),
-          execute: async ({ searchQuery = '', limit = 10 }) => {
-            // Filter templates based on search query
-            let filteredTemplates = MEME_TEMPLATES
-
-            if (searchQuery) {
-              const query = searchQuery.toLowerCase()
-              filteredTemplates = filteredTemplates.filter(
-                (template) =>
-                  template.name.toLowerCase().includes(query) ||
-                  (template.keywords &&
-                    template.keywords.some((keyword: string) =>
-                      keyword.toLowerCase().includes(query),
-                    )),
-              )
-            }
-
-            // Check if we have any results after filtering
-            if (filteredTemplates.length === 0) {
-              console.log(
-                `No templates found for query: "${searchQuery}". Using popular templates as fallback.`,
-              )
-
-              // If no matches found, suggest popular templates and provide better feedback
-              const popularTemplates = MEME_TEMPLATES.filter((template) =>
-                POPULAR_TEMPLATE_IDS.includes(template.id),
-              )
-
-              return {
-                templates: popularTemplates.map((template) => ({
-                  id: template.id,
-                  name: template.name,
-                  keywords: template.keywords || [],
-                  lines: template.lines || 2,
-                  overlays: template.overlays || 0,
-                  styles: template.styles || [],
-                  blank: template.blank,
-                  example: template.example,
-                })),
-                totalCount: popularTemplates.length,
-                message: `No templates found for "${searchQuery}". Here are some popular templates instead. You can also try a different search term or select directly from the full list of available templates.`,
-              }
-            }
-
-            // Apply limit
-            if (limit && limit > 0) {
-              filteredTemplates = filteredTemplates.slice(0, limit)
-            }
-
-            return {
-              templates: filteredTemplates.map((template) => ({
-                id: template.id,
-                name: template.name,
-                keywords: template.keywords || [],
-                lines: template.lines || 2, // Default to 2 lines if not specified
-                overlays: template.overlays || 0,
-                styles: template.styles || [],
-                blank: template.blank,
-                example: template.example,
-              })),
-              totalCount: filteredTemplates.length,
-            }
-          },
-        }),
-
         generateMeme: tool({
           description: 'Generate a meme based on user prompt',
           parameters: z.object({
-            templateId: z
-              .string()
-              .describe(
-                'ID of the meme template (e.g., "fry", "woman-cat", "doge")',
-              ),
+            templateId: z.string().describe('ID of the meme template'),
             topText: z
               .string()
               .describe('Text for the top of the meme')
@@ -263,18 +165,31 @@ export async function POST(req: Request) {
           },
         }),
       },
-      prompt: `Based on this prompt: "${prompt}", please generate a creative and funny meme. First, review the available meme templates by using the listTemplates tool. Then select an appropriate template and create funny text for the top and bottom of the meme. Once the meme is generated, mint it as an NFT for user address: ${userAddress}.
-
-Available templates:
-${templatesList}
+      prompt: `Based on this prompt: "${prompt}", please generate a creative and funny meme. I'll help you select the most appropriate meme template and create text that fits well with both the template and the user's prompt.
 
 Instructions:
-1. You can directly choose a template from the list above based on the user's prompt.
-2. If you need more information about specific templates, use the listTemplates tool with a search query.
-3. When selecting a template, consider the theme and context of the user's prompt.
-4. For templates with 2 lines, provide both topText and bottomText. Some templates may have different requirements.
-5. After generating the meme, proceed with minting it as an NFT.
-`,
+1. Carefully analyze the user's prompt for specific emotions, situations, or cultural references.
+2. Choose a meme template that best matches the theme, tone, and context of the prompt.
+3. When selecting a template, use the "id" field from the template list as your templateId parameter.
+4. The "desc" field describes what the meme template is for - use this to match content appropriately.
+5. Avoid repeatedly using the same templates - diversity in template selection is important.
+6. Create relevant and witty text for the meme that connects well with both the template's intended use and the user's request.
+7. Some templates work better with certain types of humor - match appropriately:
+   - "Drake" for approval/disapproval comparisons
+   - "Distracted Boyfriend" for attention diverted situations
+   - "Change My Mind" for controversial opinions
+   - "Two Buttons" for difficult choices
+   - "Woman Yelling at Cat" for arguments or misunderstandings
+   - "Expanding Brain" for progressively absurd ideas
+   - "Is This a Pigeon" for misidentifications
+   - "Disaster Girl" for enjoying chaos situations
+   - "Surprised Pikachu" for unexpected but predictable outcomes
+   - "Ancient Aliens Guy" for absurd explanations
+
+Here are all available templates:
+${templatesList}
+
+After selecting a template, generate a meme with appropriate text (topText and bottomText) that creates humor while staying relevant to the prompt. Then mint it as an NFT for user address: ${userAddress}.`,
       onStepFinish({ toolResults }) {
         console.log('Tool results:', toolResults)
         // Try to extract meme URL from tool results if not already captured
