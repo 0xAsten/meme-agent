@@ -1,44 +1,74 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { MemeNFT, fetchMemeNFTs } from '../lib/graphql'
-
-// Helper function to fix meme URLs by replacing // with _ but keeping https://
-const fixMemeUrl = (url: string) => {
-  // Split the URL into protocol and rest
-  const [protocol, ...rest] = url.split('://')
-
-  // Join the rest and replace any remaining double slashes with /_/
-  const fixedRest = rest.join('://').replace(/\/\//g, '/_/')
-
-  // Rejoin with the protocol
-  return `${protocol}://${fixedRest}`
-}
+import { MEMEGEN_API_BASE } from '../utils/genMemeUrl'
 
 export function MemeNFTGallery() {
   const [nfts, setNfts] = useState<MemeNFT[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [newNftIds, setNewNftIds] = useState<Set<string>>(new Set())
   const previousNftIdsRef = useRef<Set<string>>(new Set())
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  // Poll for new NFTs every 2 seconds
+  // Poll for new NFTs every 2 seconds (increased from 2 seconds)
   const POLLING_INTERVAL = 2000
+  const ITEMS_PER_PAGE = 10
 
-  const fetchNFTs = async () => {
+  const fetchNFTs = async (pageNumber = 1, isInitialLoad = false) => {
     try {
-      setLoading((prevLoading) => (nfts.length === 0 ? true : prevLoading))
+      if (isInitialLoad) {
+        setLoading(true)
+      } else {
+        setLoadingMore(true)
+      }
 
-      // Use the fetchMemeNFTs utility function
-      const memeNFTs = await fetchMemeNFTs(100)
+      // Use the fetchMemeNFTs utility function with pagination
+      const memeNFTs = await fetchMemeNFTs(
+        ITEMS_PER_PAGE,
+        (pageNumber - 1) * ITEMS_PER_PAGE,
+      )
 
-      // Check for new NFTs
-      if (previousNftIdsRef.current.size > 0) {
+      // Check if images are accessible
+      const checkImageAccessible = async (url: string): Promise<boolean> => {
+        try {
+          const response = await fetch(url, { method: 'HEAD' })
+          return response.ok
+        } catch (error) {
+          console.error('Error checking image accessibility:', error)
+          return false
+        }
+      }
+
+      // Filter NFTs that have a valid image URL and are accessible
+      const filteredMemeNFTsPromises = memeNFTs
+        .filter((nft) => nft.tokenURI.includes(MEMEGEN_API_BASE))
+        .map(async (nft) => {
+          const isAccessible = await checkImageAccessible(nft.tokenURI)
+          return { nft, isAccessible }
+        })
+
+      const accessibilityResults = await Promise.all(filteredMemeNFTsPromises)
+      const filteredMemeNFTs = accessibilityResults
+        .filter((result) => result.isAccessible)
+        .map((result) => result.nft)
+
+      // If we got fewer items than requested, there are no more items to load
+      if (memeNFTs.length < ITEMS_PER_PAGE) {
+        setHasMore(false)
+      }
+
+      // Check for new NFTs only on polling, not when loading more pages
+      if (isInitialLoad && previousNftIdsRef.current.size > 0) {
         const newTokenIds = new Set<string>()
 
         // Find NFTs that weren't in the previous set
-        memeNFTs.forEach((nft) => {
+        filteredMemeNFTs.forEach((nft) => {
           if (!previousNftIdsRef.current.has(nft.tokenId)) {
             newTokenIds.add(nft.tokenId)
           }
@@ -54,23 +84,63 @@ export function MemeNFTGallery() {
         }
       }
 
-      // Update reference with current NFT IDs for next comparison
-      previousNftIdsRef.current = new Set(memeNFTs.map((nft) => nft.tokenId))
-      setNfts(memeNFTs)
+      if (isInitialLoad) {
+        // Update reference with current NFT IDs for next comparison
+        previousNftIdsRef.current = new Set(
+          filteredMemeNFTs.map((nft) => nft.tokenId),
+        )
+        setNfts(filteredMemeNFTs)
+      } else {
+        // Append new NFTs to existing list
+        setNfts((prev) => [...prev, ...filteredMemeNFTs])
+      }
+
       setLoading(false)
+      setLoadingMore(false)
     } catch (err) {
       console.error('Error fetching NFTs:', err)
-      setError('Failed to load NFTs. Please try again later.')
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
+  // Function to load more NFTs
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      fetchNFTs(nextPage, false)
+    }
+  }, [page, loadingMore, hasMore])
+
+  // Set up intersection observer for infinite scrolling
+  useEffect(() => {
+    if (loadMoreRef.current && hasMore) {
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && !loadingMore) {
+            loadMore()
+          }
+        },
+        { threshold: 0.1 },
+      )
+
+      observerRef.current.observe(loadMoreRef.current)
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [loadMore, loadingMore, hasMore])
+
   useEffect(() => {
     // Initial fetch
-    fetchNFTs()
+    fetchNFTs(1, true)
 
-    // Set up polling
-    const intervalId = setInterval(fetchNFTs, POLLING_INTERVAL)
+    // Set up polling for new NFTs (first page only)
+    const intervalId = setInterval(() => fetchNFTs(1, true), POLLING_INTERVAL)
 
     // Clean up interval on component unmount
     return () => clearInterval(intervalId)
@@ -87,14 +157,6 @@ export function MemeNFTGallery() {
     return (
       <div className="flex justify-center items-center h-40">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="text-center p-6 bg-red-50 text-red-600 rounded-lg">
-        {error}
       </div>
     )
   }
@@ -196,6 +258,18 @@ export function MemeNFTGallery() {
           </div>
         ))}
       </div>
+
+      {/* Loading indicator for infinite scroll */}
+      {hasMore && (
+        <div
+          ref={loadMoreRef}
+          className="flex justify-center items-center p-4 mt-2"
+        >
+          {loadingMore && (
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-500"></div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -210,8 +284,9 @@ function MemeNFTCard({
   truncateAddress: (address: string) => string
   isNew?: boolean
 }) {
-  // Fix the tokenURI if it contains double slashes
-  const fixedTokenURI = fixMemeUrl(nft.tokenURI)
+  const nftTokenURI = nft.tokenURI
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   return (
     <div
@@ -220,15 +295,32 @@ function MemeNFTCard({
       }`}
     >
       <div className="w-full">
-        <Image
-          src={fixedTokenURI}
-          alt={`Meme NFT #${nft.tokenId}`}
-          width={500}
-          height={500}
-          unoptimized
-          className="w-full h-auto"
-          priority={parseInt(nft.tokenId) < 5}
-        />
+        {!imageLoaded && !imageError && (
+          <div className="w-full aspect-square bg-gray-200 flex items-center justify-center">
+            <div className="w-8 h-8 border-t-2 border-b-2 border-purple-500 rounded-full animate-spin"></div>
+          </div>
+        )}
+        {!imageError ? (
+          <Image
+            src={nftTokenURI}
+            alt={`Meme NFT #${nft.tokenId}`}
+            width={400}
+            height={400}
+            quality={75}
+            onError={() => setImageError(true)}
+            onLoad={() => setImageLoaded(true)}
+            loading="lazy"
+            className={`w-full h-auto ${
+              !imageLoaded ? 'invisible absolute' : ''
+            }`}
+            priority={parseInt(nft.tokenId) < 5}
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+          />
+        ) : (
+          <div className="w-full aspect-square bg-gray-300 flex items-center justify-center text-gray-500 text-sm">
+            Failed to load image
+          </div>
+        )}
       </div>
 
       {/* Overlay that appears on hover */}
@@ -238,7 +330,7 @@ function MemeNFTCard({
           <div className="text-xs opacity-80">{truncateAddress(nft.owner)}</div>
           <div className="mt-1 flex gap-1">
             <a
-              href={fixedTokenURI}
+              href={nftTokenURI}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs bg-purple-600 hover:bg-purple-700 px-2 py-0.5 rounded text-white"
@@ -247,7 +339,7 @@ function MemeNFTCard({
             </a>
             <button
               className="text-xs bg-gray-600 hover:bg-gray-700 px-2 py-0.5 rounded text-white"
-              onClick={() => window.open(fixedTokenURI, '_blank')}
+              onClick={() => window.open(nftTokenURI, '_blank')}
             >
               Save
             </button>

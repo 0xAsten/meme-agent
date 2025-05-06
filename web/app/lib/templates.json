@@ -3208,24 +3208,6 @@
     "_self": "https://api.memegen.link/templates/wkh"
   },
   {
-    "id": "woman-cat",
-    "name": "Woman Yelling at a Cat",
-    "lines": 2,
-    "overlays": 2,
-    "styles": ["default"],
-    "blank": "https://api.memegen.link/images/woman-cat.jpg",
-    "example": {
-      "text": [
-        "Mom telling me how useless I am",
-        "12 year old me playing Minecraft"
-      ],
-      "url": "https://api.memegen.link/images/woman-cat/Mom_telling_me_how_useless_I_am/12_year_old_me_playing_Minecraft.jpg"
-    },
-    "source": "https://knowyourmeme.com/memes/woman-yelling-at-a-cat",
-    "keywords": [],
-    "_self": "https://api.memegen.link/templates/woman-cat"
-  },
-  {
     "id": "wonka",
     "name": "Condescending Wonka",
     "lines": 2,

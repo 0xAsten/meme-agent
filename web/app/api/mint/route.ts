@@ -7,6 +7,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { soneium } from 'wagmi/chains'
 import { generateMemeUrl } from '../../utils/genMemeUrl'
 import templatesData from '../../lib/templates.json'
+import { MEMEGEN_API_BASE } from '../../utils/genMemeUrl'
 
 // Define the template interface to match the structure in templates.json
 interface MemeTemplate {
@@ -126,6 +127,17 @@ export async function POST(req: Request) {
               `Minting NFT with URL: ${memeUrl} to address: ${toAddress}`,
             )
 
+            // check if the memeUrl is valid
+            // if it is a memeGen url, check if it is valid
+            if (memeUrl.startsWith(MEMEGEN_API_BASE)) {
+              const response = await fetch(memeUrl)
+              if (!response.ok) {
+                throw new Error('Invalid meme URL, please try again.')
+              }
+            } else {
+              throw new Error('Invalid meme URL, please try again.')
+            }
+
             if (!walletClient) {
               throw new Error(
                 'Wallet client not configured. Missing PRIVATE_KEY.',
@@ -174,17 +186,6 @@ Instructions:
 4. The "desc" field describes what the meme template is for - use this to match content appropriately.
 5. Avoid repeatedly using the same templates - diversity in template selection is important.
 6. Create relevant and witty text for the meme that connects well with both the template's intended use and the user's request.
-7. Some templates work better with certain types of humor - match appropriately:
-   - "Drake" for approval/disapproval comparisons
-   - "Distracted Boyfriend" for attention diverted situations
-   - "Change My Mind" for controversial opinions
-   - "Two Buttons" for difficult choices
-   - "Woman Yelling at Cat" for arguments or misunderstandings
-   - "Expanding Brain" for progressively absurd ideas
-   - "Is This a Pigeon" for misidentifications
-   - "Disaster Girl" for enjoying chaos situations
-   - "Surprised Pikachu" for unexpected but predictable outcomes
-   - "Ancient Aliens Guy" for absurd explanations
 
 Here are all available templates:
 ${templatesList}

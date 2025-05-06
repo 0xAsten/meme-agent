@@ -15,8 +15,13 @@ export interface GraphQLResponse {
 
 // GraphQL query for fetching meme NFTs
 export const GET_MEME_NFTS = gql`
-  query GetMemeNFTs($first: Int!) {
-    memeNFTs(first: $first, orderBy: tokenId, orderDirection: desc) {
+  query GetMemeNFTs($first: Int!, $skip: Int) {
+    memeNFTs(
+      first: $first
+      skip: $skip
+      orderBy: tokenId
+      orderDirection: desc
+    ) {
       id
       tokenId
       owner
@@ -30,12 +35,29 @@ const GRAPH_API_URL =
   process.env.NEXT_PUBLIC_GRAPH_API_URL ||
   'https://api.studio.thegraph.com/query/61864/soneium-meme-agent/version/latest'
 
-// Function to fetch meme NFTs
-export async function fetchMemeNFTs(limit: number = 100): Promise<MemeNFT[]> {
+// Authorization token for The Graph API (if required)
+const GRAPH_API_TOKEN = process.env.NEXT_PUBLIC_GRAPH_API_TOKEN || ''
+
+// Headers for Graph API requests
+const headers: Record<string, string> = GRAPH_API_TOKEN
+  ? { Authorization: `Bearer ${GRAPH_API_TOKEN}` }
+  : {}
+
+// Function to fetch meme NFTs with pagination support
+export async function fetchMemeNFTs(
+  limit: number = 20,
+  skip: number = 0,
+): Promise<MemeNFT[]> {
   try {
-    const data = await request<GraphQLResponse>(GRAPH_API_URL, GET_MEME_NFTS, {
-      first: limit,
-    })
+    const data = await request<GraphQLResponse>(
+      GRAPH_API_URL,
+      GET_MEME_NFTS,
+      {
+        first: limit,
+        skip: skip,
+      },
+      headers,
+    )
 
     return data.memeNFTs
   } catch (error) {
