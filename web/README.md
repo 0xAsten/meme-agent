@@ -1,99 +1,57 @@
-# Meme Agent: AI-Powered Meme NFT Generation Platform
+## Setup Instructions
 
-## Problem Statement
+Follow these steps to set up the Meme Agent project locally:
 
-The current landscape of meme creation and distribution faces several challenges:
+### 1. Environment Setup
 
-1. **Creativity Barrier**: Creating engaging memes requires both humor and graphic design skills that not everyone possesses.
-2. **Ownership Issues**: In the digital space, meme creators rarely receive credit or compensation for their work.
-3. **Distribution Limitations**: Even great memes struggle to reach their potential audience without proper distribution channels.
-4. **Monetization Challenges**: Digital content creators have limited options to monetize meme creation.
-5. **Fragmented Workflow**: Current meme creation involves multiple tools and platforms, making the process cumbersome.
+1. Rename `.env_exmaple` to `.env`:
 
-## Project Objective
+   ```bash
+   cp .env_exmaple .env
+   ```
 
-Meme Agent is a web3 platform that combines AI-powered meme generation with blockchain technology to revolutionize how memes are created, owned, and distributed. The platform aims to:
+2. Configure your `.env` file with the following values:
+   - `NEXT_PUBLIC_RPC_URL`: Your RPC URL for blockchain connection
+   - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`: The WalletConnect Project ID
+   - `PRIVATE_KEY`: Your wallet private key for contract interactions
+   - `GOOGLE_GENERATIVE_AI_API_KEY`: Your Google Generative AI API key for AI-powered meme generation
+   - `NEXT_PUBLIC_GRAPH_URL`: The Graph API URL for querying NFT data
 
-1. Democratize meme creation by leveraging AI to generate high-quality, personalized memes from text prompts.
-2. Establish verifiable ownership through NFT minting on the Soneium blockchain.
-3. Create a decentralized gallery for meme discovery and sharing.
-4. Enable content creators to monetize their creative ideas.
-5. Streamline the entire process from ideation to ownership in a single, user-friendly interface.
+### 2. Install Dependencies
 
-## Methodology
+```bash
+pnpm install
+```
 
-Our solution integrates several cutting-edge technologies:
+### 3. Run Development Server
 
-### 1. AI-Powered Meme Generation
+```bash
+pnpm dev
+```
 
-- Uses Gemini 2.0 Flash for natural language understanding and creative concept generation
-- Implements specialized tools for template selection and text placement optimization
-- Processes user prompts to identify the most suitable meme templates and generate appropriate text
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-### 2. Blockchain Integration
+## Project Structure
 
-- Leverages the Soneium blockchain for NFT minting and verification
-- Implements smart contracts for transparent ownership and provenance tracking
-- Uses a serverless architecture for minting operations
+- `/app`: Next.js application code
+- `/app/components`: React components
+- `/app/lib`: Utility libraries
+- `/app/api`: API endpoints
+- `/contracts`: Smart contract code for NFT minting
+- `/graph`: The Graph subgraph for indexing NFT data
 
-### 3. Real-time Feed and Gallery
+## Technologies Used
 
-- GraphQL integration via The Graph for efficient data indexing and querying
-- Responsive masonry layout design that adapts to different screen sizes
-- Real-time updates when new memes are minted
+- Next.js for frontend
+- Google AI for natural language processing
+- memegen.link API for meme generation
+- WalletConnect and viem for blockchain interactions
+- The Graph for indexed NFT data
 
-### 4. Web3 Wallet Integration
+## Contributing
 
-- Seamless wallet connection through ConnectKit
-- Secure transaction handling and signature verification
-- User-friendly authentication flow
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Scope of Solution
+## License
 
-The current implementation includes:
-
-1. **User Interface**:
-
-   - Interactive prompt input with character limits and example suggestions
-   - Connected wallet state management and validation
-   - Responsive gallery with hover effects and metadata display
-   - Optimized image loading and rendering
-
-2. **Backend Services**:
-
-   - AI integration for prompt processing and meme generation
-   - Smart contract interaction for NFT minting
-   - Template management system with 3000+ pre-defined meme templates
-   - Blockchain transaction handling and error management
-
-3. **Data Layer**:
-   - Subgraph integration for blockchain data indexing
-   - GraphQL API for efficient data retrieval
-   - Real-time polling for updated NFT data
-
-## Technical Implementation
-
-The project is built using a modern tech stack:
-
-- **Frontend**: Next.js, React 18, TailwindCSS
-- **AI Integration**: AI SDK with Google's Gemini 2.0 Flash
-- **Blockchain**: Viem, Wagmi, ConnectKit for Web3 interactions
-- **Data Management**: GraphQL, React Query
-- **DevOps**: GitHub Actions CI/CD pipeline
-
-## Future Enhancements
-
-We plan to expand the platform with:
-
-1. **Meme Trading and Marketplace**: A dedicated marketplace for buying and selling meme NFTs
-2. **Advanced Customization**: More granular control over meme generation, including style transfer and image manipulation
-3. **Community Features**: Upvoting, commenting, and social sharing capabilities
-4. **Creator Profiles**: Personalized galleries for meme creators
-5. **Multi-chain Support**: Expansion to additional blockchain networks
-6. **Mobile Application**: Native mobile experience for on-the-go meme creation
-
-## Conclusion
-
-Meme Agent represents a significant step forward in democratizing meme creation and establishing ownership in the digital content space. By combining AI creativity with blockchain verification, we've created a platform that empowers creators and builds a more transparent meme ecosystem.
-
-The project demonstrates the potential of AI-assisted creative tools in the Web3 space and offers a glimpse into the future of digital content creation and ownership.
+This project is licensed under the MIT License - see the LICENSE file for details.
