@@ -209,11 +209,14 @@ export async function POST(req: Request) {
 
 Instructions:
 1. Carefully analyze the user's prompt for specific emotions, situations, or cultural references.
-2. Choose a meme template that best matches the theme, tone, and context of the prompt.
-3. When selecting a template, use the "id" field from the template list as your templateId parameter.
-4. Pay attention to the "lines" field which indicates how many text lines the template supports.
-5. Study the "example" field to understand how the template is typically used - this contains sample text that works well with this template.
-6. Avoid repeatedly using the same templates - diversity in template selection is important.
+2. Choose a meme template that BEST MATCHES the specific scenario, emotional tone, or logical structure of the prompt.
+3. IMPORTANT: DO NOT default to popular templates like "Distracted Boyfriend" (db), "Drake" or "Change My Mind" simply because they're well-known.
+4. Instead, prioritize template-content fit over template popularity. Look for templates that specifically match the:
+   - Emotional reaction being expressed
+   - Number of entities/concepts being compared
+   - Type of situation (irony, realization, frustration, comparison, etc.)
+5. Pay attention to the "lines" field which indicates how many text lines the template supports.
+6. Study the "example" field to understand how the template is typically used - this contains sample text that works well with this template.
 7. Create relevant and witty text lines for the meme that connects well with both the template's intended use and the user's request.
 8. Provide exactly the right number of text lines for the chosen template.
 
